@@ -5,6 +5,15 @@ import * as dynamodb from '@aws-cdk/aws-dynamodb';
 export interface HitCounterProps {
     /** the function for which we want to count url hits **/
     downstream: lambda.Function;
+
+    /** 
+     * The read capacity units for the table
+     * 
+     * Must be greater than 5 and less than 20
+     * 
+     * @default 5
+      */
+     readCapacity?: number;
 }
 
 export class HitCounter extends cdk.Construct {
@@ -16,10 +25,17 @@ export class HitCounter extends cdk.Construct {
     public readonly table: dynamodb.Table;
 
     constructor (scope: cdk.Construct, id: string, props: HitCounterProps){
+        if (props.readCapacity !== undefined && (props.readCapacity < 5 || 
+            props.readCapacity > 20)) {
+            throw new Error('readCapacity must be greater than 5 and less than 20')
+        }
+
         super(scope, id);
 
         const table = new dynamodb.Table(this, 'Hits', {
-            partitionKey: { name: 'path', type: dynamodb.AttributeType.STRING }
+            partitionKey: { name: 'path', type: dynamodb.AttributeType.STRING }, 
+            readCapacity: props.readCapacity || 5, 
+            serverSideEncryption: true
         });
 
         this.table = table;
